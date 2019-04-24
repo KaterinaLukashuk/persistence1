@@ -12,7 +12,7 @@ import javax.persistence.Table;
  * Class holding information on a person.
  */
 @Entity
-@Table(name = "T_PERSON")
+@Table(name = "T_PERSON", schema = "mydb")
 @NamedQuery(name = "AllPersons", query = "select p from Person p")
 public class Person {
     @Id
