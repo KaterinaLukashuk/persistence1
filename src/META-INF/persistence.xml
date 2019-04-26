@@ -4,10 +4,12 @@
     <persistence-unit name="persistence-with-jpa" transaction-type="RESOURCE_LOCAL">
         <provider>org.eclipse.persistence.jpa.PersistenceProvider</provider>
         <class>com.sap.cloud.sample.helloworld.Person</class>
+        <class>com.sap.cloud.sample.helloworld.Department</class>
+        <class>com.sap.cloud.sample.helloworld.Project</class>
         <properties>
-       
             <property name="eclipselink.ddl-generation" value="create-tables" />
             <property name="eclipselink.logging.level" value="SEVERE" />
+            <property name="eclipselink.target-database" value="HANA"/>
         </properties>
     </persistence-unit>
 </persistence>

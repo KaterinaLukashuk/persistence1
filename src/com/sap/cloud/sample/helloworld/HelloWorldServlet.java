@@ -3,10 +3,11 @@ package com.sap.cloud.sample.helloworld;
 import java.io.IOException;
 import java.sql.Connection;
 import java.sql.SQLException;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-
+import java.util.Set;
 
 import javax.naming.InitialContext;
 import javax.naming.NamingException;
@@ -24,6 +25,8 @@ import org.eclipse.persistence.config.PersistenceUnitProperties;
 
 import com.sap.cloud.sample.helloworld.Person;
 import com.sap.security.core.server.csi.IXSSEncoder;
+import com.sap.security.core.server.csi.IXSSEncoder;
+import com.sap.security.core.server.csi.XSSEncoder;
 import com.sap.security.core.server.csi.XSSEncoder;
 
 /**
@@ -87,26 +90,45 @@ public class HelloWorldServlet extends HttpServlet {
    private void appendPersonTable(HttpServletResponse response) throws SQLException, IOException {
        // Append table that lists all persons
        EntityManager em = emf.createEntityManager();
-       
+
        try {
            @SuppressWarnings("unchecked")
            List<Person> resultList = em.createNamedQuery("AllPersons").getResultList();
+           List<Project> prtList = em.createNamedQuery("AllProjects").getResultList();
            response.getWriter().println(
-                   "<p><table border=\"1\"><tr><th colspan=\"3\">"
+                   "<p><table border=\"1\"><tr><th colspan=\"4\">"
                            + (resultList.isEmpty() ? "" : resultList.size() + " ")
                            + "Entries in the Database</th></tr>");
            if (resultList.isEmpty()) {
-               response.getWriter().println("<tr><td colspan=\"3\">Database is empty</td></tr>");
+               response.getWriter().println("<tr><td colspan=\"4\">Database is empty</td></tr>");
            } else {
-               response.getWriter().println("<tr><th>First name</th><th>Last name</th><th>Id</th></tr>");
+               response.getWriter().println("<tr><th>First name</th><th>Last name</th><th>Id</th><th>Department id</th></tr>");
            }
+         
            IXSSEncoder xssEncoder = XSSEncoder.getInstance();
+       
+           
            for (Person p : resultList) {
                response.getWriter().println(
                        "<tr><td>" + xssEncoder.encodeHTML(p.getFirstName()) + "</td><td>"
-                               + xssEncoder.encodeHTML(p.getLastName()) + "</td><td>" + p.getId() + "</td></tr>");
+                               + xssEncoder.encodeHTML(p.getLastName()) + "</td><td>" + p.getId() + "</td><td>"
+                               + xssEncoder.encodeHTML(p.getDepartment().getDepartmentName())//+ "</td><td>"
+                            		 //  + xssEncoder.encodeHTML(p.getProjects().toArray().toString())
+                           
+                               + "</td></tr>"
+            		   );
            }
            response.getWriter().println("</table></p>");
+           
+           for(Project pr : prtList)
+           {
+        	   response.getWriter().println("<b>" + xssEncoder.encodeHTML( pr.getProjName()) + "</b>"  + "<br>");
+        	   List<Person> prPers = new ArrayList<>(pr.getPersons());
+        	   for (Person p: prPers ) {
+        		   response.getWriter().println( "<p>" + xssEncoder.encodeHTML( p.getLastName()) + "</p>");
+        	   }
+        	   response.getWriter().println( "<br>");
+           }
        } finally {
            em.close();
        }
@@ -118,6 +140,8 @@ public class HelloWorldServlet extends HttpServlet {
                "<p><form action=\"\" method=\"post\">" + "First name:<input type=\"text\" name=\"FirstName\">"
                        + "&nbsp;Last name:<input type=\"text\" name=\"LastName\">"
                        + "&nbsp;<input type=\"submit\" value=\"Add Person\">" + "</form></p>");
+       
+       
    }
 
    private void doAdd(HttpServletRequest request) throws ServletException, IOException, SQLException {
