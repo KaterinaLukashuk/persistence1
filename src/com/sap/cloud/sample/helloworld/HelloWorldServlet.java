@@ -9,12 +9,13 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import javax.management.Query;
 import javax.naming.InitialContext;
 import javax.naming.NamingException;
 import javax.persistence.EntityManager;
 import javax.persistence.EntityManagerFactory;
 import javax.persistence.Persistence;
-//import javax.
+
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
@@ -46,7 +47,6 @@ public class HelloWorldServlet extends HttpServlet {
        try {
            InitialContext ctx = new InitialContext();
            ds = (DataSource) ctx.lookup("java:comp/env/jdbc/DefaultDB");
-
            Map properties = new HashMap();
            properties.put(PersistenceUnitProperties.NON_JTA_DATASOURCE, ds);
            emf = Persistence.createEntityManagerFactory("persistence-with-jpa", properties);
@@ -79,7 +79,25 @@ public class HelloWorldServlet extends HttpServlet {
    protected void doPost(HttpServletRequest request, HttpServletResponse response) throws ServletException,
            IOException {
        try {
-           doAdd(request);
+    	   String cmd=request.getParameter("cmd");
+    	   if(cmd.equals("Add department"))
+    	   {
+    		   doAddDepartment(request);
+    	   }
+    	 else
+    	 if(cmd.equals("Add Person"))
+    	  {
+    		 doAdd(request);
+    	  }
+    	 else
+    		 if (cmd.contentEquals("Add project"))
+    		 {
+    			  doAddProject(request);
+    		 }else
+    			 if(cmd.contentEquals("Add Person to proj"))
+    		 {
+    			 doAddPersToProj(request);
+    		 }
            doGet(request, response);
        } catch (Exception e) {
            response.getWriter().println("Persistence operation failed with reason: " + e.getMessage());
@@ -95,6 +113,7 @@ public class HelloWorldServlet extends HttpServlet {
            @SuppressWarnings("unchecked")
            List<Person> resultList = em.createNamedQuery("AllPersons").getResultList();
            List<Project> prtList = em.createNamedQuery("AllProjects").getResultList();
+           List<Department> depList = em.createNamedQuery("AllDepartments").getResultList();
            response.getWriter().println(
                    "<p><table border=\"1\"><tr><th colspan=\"4\">"
                            + (resultList.isEmpty() ? "" : resultList.size() + " ")
@@ -120,6 +139,7 @@ public class HelloWorldServlet extends HttpServlet {
            }
            response.getWriter().println("</table></p>");
            
+           response.getWriter().println("<br><b>" + "____ALL PROJECTS____" + "</b><br>" );
            for(Project pr : prtList)
            {
         	   response.getWriter().println("<b>" + xssEncoder.encodeHTML( pr.getProjName()) + "</b>"  + "<br>");
@@ -129,6 +149,13 @@ public class HelloWorldServlet extends HttpServlet {
         	   }
         	   response.getWriter().println( "<br>");
            }
+           
+           response.getWriter().println("<br><b>" + "____ALL DEPARTMENTS____" + "</b><br>" );
+           for(Department d : depList)
+           {
+        	   response.getWriter().println( xssEncoder.encodeHTML( d.getDepartmentName()) +  "<br>");
+           }
+           
        } finally {
            em.close();
        }
@@ -136,10 +163,50 @@ public class HelloWorldServlet extends HttpServlet {
 
    private void appendAddForm(HttpServletResponse response) throws IOException {
        // Append form through which new persons can be added
+	   EntityManager em = emf.createEntityManager();
+	   IXSSEncoder xssEncoder = XSSEncoder.getInstance();
+	   List<Department> depList = em.createNamedQuery("AllDepartments").getResultList();
+	   List<Project> prtList = em.createNamedQuery("AllProjects").getResultList();
+	   List<Person> resultList = em.createNamedQuery("AllPersons").getResultList();
        response.getWriter().println(
                "<p><form action=\"\" method=\"post\">" + "First name:<input type=\"text\" name=\"FirstName\">"
                        + "&nbsp;Last name:<input type=\"text\" name=\"LastName\">"
-                       + "&nbsp;<input type=\"submit\" value=\"Add Person\">" + "</form></p>");
+                       + "Department:<select name=\"department\">");
+       
+       for(Department d : depList)
+       {
+    	   response.getWriter().println("<option  value = \"" + d.getId() +"\">" + xssEncoder.encodeHTML( d.getDepartmentName()) + "<option>" );
+       }
+  
+       response.getWriter().println("</select>"+"&nbsp;<input type=\"submit\"name=\"cmd\" value=\"Add Person\">" + "<br>");
+
+       
+       
+       response.getWriter().println(
+       "Department:<input type=\"text\" name=\"newdepartment\">" 
+                       + "&nbsp;<input type=\"submit\"name=\"cmd\" value=\"Add department\">"
+                       + "<br>"
+                       + "Project:<input type=\"text\" name=\"newproject\">" 
+                       + "&nbsp;<input type=\"submit\"name=\"cmd\" value=\"Add project\"> <br>"
+                       + "Project:<select name=\"project\">");
+                       
+       for(Project pr : prtList)
+       {
+    	   response.getWriter().println("<option name = \"project_id\" value = \"" + pr.getId() +"\" >" + xssEncoder.encodeHTML( pr.getProjName()) + "</option>" //+
+//                   "<input type = hidden name = \"project_id\" value = " + pr.getId() + ">"
+    			   );
+       }
+       response.getWriter().println("</select>"+ "Person:<select name=\"proj_person\">");
+       for(Person p : resultList)
+       {
+    	   response.getWriter().println("<option name = \"person_id\" value = \"" + p.getId() +"\" >"+ xssEncoder.encodeHTML( p.getFirstName()+ " " + p.getLastName()) + "</option>"// +
+//    			   "<input type = hidden name = \"person_id\" value = " + p.getId() + "/>"
+    			   );
+       }
+       response.getWriter().println("</select>");
+       response.getWriter().println("&nbsp;<input type=\"submit\"name=\"cmd\" value=\"Add Person to proj\"><br>");
+       
+                       response.getWriter().println("</form></p>");
        
        
    }
@@ -148,14 +215,25 @@ public class HelloWorldServlet extends HttpServlet {
        // Extract name of person to be added from request
        String firstName = request.getParameter("FirstName");
        String lastName = request.getParameter("LastName");
-
-       // Add person if name is not null/empty
+       String department = request.getParameter("department");
        EntityManager em = emf.createEntityManager();
+       Department dep = em.find(Department.class, Long.parseLong(department));
+       List<Department> depList = em.createNamedQuery("AllDepartments").getResultList();
+//       for(Department d: depList)
+//       {
+//    	   if (d.getDepartmentName().contentEquals(department))
+//    	   {
+//    		   dep=d;
+//    	   }
+//       }
+      
+       
        try {
            if (firstName != null && lastName != null && !firstName.trim().isEmpty() && !lastName.trim().isEmpty()) {
                Person person = new Person();
                person.setFirstName(firstName);
                person.setLastName(lastName);
+               person.setDepartment(dep);
                em.getTransaction().begin();
                em.persist(person);
                em.getTransaction().commit();
@@ -164,4 +242,73 @@ public class HelloWorldServlet extends HttpServlet {
            em.close();
        }
    }
+   
+   private void doAddDepartment(HttpServletRequest request) throws ServletException, IOException, SQLException {
+       // Extract name of person to be added from request
+       String department = request.getParameter("newdepartment");
+       EntityManager em = emf.createEntityManager();
+       Department dep = new Department();
+       try {
+           if (department != null  && !department.trim().isEmpty() ) {
+               dep.setDepartmentName(department);
+               em.getTransaction().begin();
+               em.persist(dep);
+               em.getTransaction().commit();
+           }
+       } finally {
+           em.close();
+       }
+   }
+   
+   private void doAddProject(HttpServletRequest request) throws ServletException, IOException, SQLException {
+       // Extract name of person to be added from request
+       String project = request.getParameter("newproject");
+       EntityManager em = emf.createEntityManager();
+       Project proj = new Project();
+       try {
+           if (project != null  && !project.trim().isEmpty() ) {
+               proj.setProjName(project);
+               em.getTransaction().begin();
+               em.persist(proj);
+               em.getTransaction().commit();
+           }
+       } finally {
+           em.close();
+       }
+   }
+   
+   private void  doAddPersToProj(HttpServletRequest request) throws ServletException, IOException, SQLException {
+       // Extract name of person to be added from request
+       String project = request.getParameter("project");
+       String person = request.getParameter("proj_person");
+    //   Project prj = new Project();
+       
+       EntityManager em = emf.createEntityManager();  
+       
+    //   Project prj = em.find(Project.class,Integer.parseInt(project)); // get project by PK 
+       List<Project> prtList = em.createNamedQuery("AllProjects").getResultList();
+       try {
+           if (project != null  && !project.trim().isEmpty() && person != null  && !person.trim().isEmpty() ) {
+               em.getTransaction().begin();
+         //    em.persist(proj);
+         //    em.persist(prj.getPersons());
+               javax.persistence.Query q = em.createNativeQuery("INSERT INTO PROJECT_PERSON VALUES("+ person + " , " + project + ");");
+               q.executeUpdate();
+               em.getTransaction().commit();
+           }
+       } finally {
+           em.close();
+       }
+   }
+   
+   private void dropPerson(HttpServletRequest request) {
+	   //detach(Object entity)
+   }
+   private void dropProject(HttpServletRequest request) {
+	   
+   }
+   private void dropDepartment(HttpServletRequest request) {
+	   
+   }
 }
+

@@ -9,7 +9,7 @@
         <properties>
             <property name="eclipselink.ddl-generation" value="create-tables" />
             <property name="eclipselink.logging.level" value="SEVERE" />
-            <property name="eclipselink.target-database" value="HANA"/>
+         <!--   <property name="eclipselink.target-database" value="HANA"/>-->
         </properties>
     </persistence-unit>
 </persistence>

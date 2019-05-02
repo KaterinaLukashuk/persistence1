@@ -32,7 +32,6 @@ public class Person {
     private String lastName;
     
     @ManyToOne(fetch = FetchType.EAGER)
-   // @JoinColumn(name = "DEPARTMENT_ID", foreignKey = @ForeignKey(name = "PERSON_DEPARTMENT_ID_FK"),referencedColumnName="id")
     @JoinColumn(name = "DEPARTMENT_ID",
     foreignKey = @ForeignKey(name = "PERSON_DEPARTMENT_ID_FK"))
     private Department department;
